@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>攒钱进度追踪</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 800px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* 标题区域 */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* 金额显示 */
+        .amount-display {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .current-amount {
+            font-size: 48px;
+            font-weight: 800;
+            color: #667eea;
+            line-height: 1.2;
+        }
+
+        .target-amount {
+            font-size: 18px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .target-amount span {
+            color: #764ba2;
+            font-weight: 600;
+        }
+
+        /* 进度条区域 */
+        .progress-section {
+            margin-bottom: 30px;
+        }
+
+        .progress-bar-container {
+            background: #e0e0e0;
+            border-radius: 50px;
+            height: 30px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-text {
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            z-index: 1;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #888;
+        }
+
+        /* 里程碑标记 */
+        .milestones {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            padding: 0 5px;
+        }
+
+        .milestone {
+            text-align: center;
+            position: relative;
+        }
+
+        .milestone-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ddd;
+            margin: 0 auto 5px;
+            transition: all 0.3s;
+        }
+
+        .milestone-dot.active {
+            background: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+
+        .milestone-label {
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        /* 输入区域 */
+        .input-section {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .input-field {
+            flex: 1;
+            position: relative;
+        }
+
+        .input-field label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .input-field input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            outline: none;
+            background: white;
+        }
+
+        .input-field input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-field .currency {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 14px;
+            pointer-events: none;
+            margin-top: 12px;
+        }
+
+        .btn-add {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-add:active {
+            transform: translateY(0);
+        }
+
+        .btn-add:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 快捷金额 */
+        .quick-amounts {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .quick-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        /* 历史记录 */
+        .history-section {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .history-header h2 {
+            font-size: 18px;
+            color: #333;
+        }
+
+        .history-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: all 0.3s;
+            border-left: 4px solid #667eea;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .history-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .history-item-info {
+            flex: 1;
+        }
+
+        .history-item-note {
+            font-size: 15px;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .history-item-date {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .history-item-amount {
+            font-size: 20px;
+            font-weight: 700;
+            color: #667eea;
+            margin-right: 15px;
+        }
+
+        .btn-delete {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            opacity: 0.7;
+        }
+
+        .btn-delete:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #ccc;
+        }
+
+        .empty-state svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px 15px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 800;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+                background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            }
+
+            .container {
+                padding: 20px;
+                border-radius: 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .current-amount {
+                font-size: 36px;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .stat-card {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 15px 20px;
+            }
+
+            .stat-value {
+                font-size: 20px;
+            }
+
+            .history-item {
+                padding: 14px 16px;
+            }
+
+            .history-item-amount {
+                font-size: 18px;
+            }
+        }
+
+        @media (min-width: 601px) and (max-width: 900px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        /* 庆祝动画 */
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall 3s ease-out forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* 滚动条美化 */
+        .history-section::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .history-section::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .history-section::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .history-section::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+
+        /* 达成提示 */
+        .achievement-banner {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 攒钱进度追踪</h1>
+            <p class="subtitle">积少成多，向目标迈进</p>
+        </div>
+
+        <div class="achievement-banner" id="achievementBanner">
+            🎉 恭喜！你已经达成了攒钱目标！
+        </div>
+
+        <div class="amount-display">
+            <div class="current-amount" id="currentAmount">¥0</div>
+            <div class="target-amount">目标: <span>¥24,897</span></div>
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar" style="width: 0%">
+                    <span class="progress-text" id="progressText">0%</span>
+                </div>
+            </div>
+            <div class="progress-info">
+                <span id="remainingText">还差 ¥24,897</span>
+                <span id="progressDetail">0 / 24,897</span>
+            </div>
+            <div class="milestones">
+                <div class="milestone">
+                    <div class="milestone-dot" data-pct="25"></div>
+                    <div class="milestone-label">25%</div>
+                </div>
+                <div class="milestone">
+                    <div class="milestone-dot" data-pct="50"></div>
+                    <div class="milestone-label">50%</div>
+                </div>
+                <div class="milestone">
+                    <div class="milestone-dot" data-pct="75"></div>
+                    <div class="milestone-label">75%</div>
+                </div>
+                <div class="milestone">
+                    <div class="milestone-dot" data-pct="100"></div>
+                    <div class="milestone-label">100%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="statCount">0</div>
+                <div class="stat-label">存入次数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statAvg">¥0</div>
+                <div class="stat-label">平均每次</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statMax">¥0</div>
+                <div class="stat-label">单笔最高</div>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="quick-amounts">
+                <button class="quick-btn" onclick="setAmount(100)">+100</button>
+                <button class="quick-btn" onclick="setAmount(500)">+500</button>
+                <button class="quick-btn" onclick="setAmount(1000)">+1000</button>
+                <button class="quick-btn" onclick="setAmount(2000)">+2000</button>
+                <button class="quick-btn" onclick="setAmount(5000)">+5000</button>
+            </div>
+            <div class="input-group">
+                <div class="input-field">
+                    <label>存入金额</label>
+                    <input type="number" id="amountInput" placeholder="输入金额" min="0" step="0.01">
+                    <span class="currency">元</span>
+                </div>
+                <div class="input-field">
+                    <label>备注说明</label>
+                    <input type="text" id="noteInput" placeholder="例如：3月工资结余">
+                </div>
+            </div>
+            <button class="btn-add" id="addBtn" onclick="addRecord()">
+                💵 存入这笔钱
+            </button>
+        </div>
+
+        <div class="history-section">
+            <div class="history-header">
+                <h2>📋 存钱记录</h2>
+                <span class="history-count" id="historyCount">0 笔</span>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    <p>还没有存钱记录，开始你的第一笔存入吧！</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="celebration" id="celebration"></div>
+
+    <script>
+        const TARGET = 24897;
+        let records = JSON.parse(localStorage.getItem('savingsRecords')) || [];
+
+        function formatMoney(amount) {
+            return '¥' + amount.toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        }
+
+        function updateDisplay() {
+            const total = records.reduce((sum, r) => sum + r.amount, 0);
+            const percentage = Math.min((total / TARGET) * 100, 100);
+            const remaining = Math.max(TARGET - total, 0);
+
+            document.getElementById('currentAmount').textContent = formatMoney(total);
+            document.getElementById('progressBar').style.width = percentage + '%';
+            document.getElementById('progressText').textContent = percentage.toFixed(1) + '%';
+            document.getElementById('remainingText').textContent = remaining > 0 ? `还差 ${formatMoney(remaining)}` : '目标已达成！🎉';
+            document.getElementById('progressDetail').textContent = `${formatMoney(total)} / ${formatMoney(TARGET)}`;
+
+            // 更新里程碑
+            document.querySelectorAll('.milestone-dot').forEach(dot => {
+                const pct = parseInt(dot.dataset.pct);
+                if (percentage >= pct) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+
+            // 更新统计
+            document.getElementById('statCount').textContent = records.length;
+            document.getElementById('statAvg').textContent = records.length > 0 ? formatMoney(total / records.length) : '¥0';
+            document.getElementById('statMax').textContent = records.length > 0 ? formatMoney(Math.max(...records.map(r => r.amount))) : '¥0';
+
+            // 达成检测
+            const banner = document.getElementById('achievementBanner');
+            if (total >= TARGET && banner.style.display !== 'block') {
+                banner.style.display = 'block';
+                celebrate();
+            } else if (total < TARGET) {
+                banner.style.display = 'none';
+            }
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            const count = document.getElementById('historyCount');
+
+            count.textContent = records.length + ' 笔';
+
+            if (records.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        <p>还没有存钱记录，开始你的第一笔存入吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = records.slice().reverse().map((record, index) => `
+                <div class="history-item">
+                    <div class="history-item-info">
+                        <div class="history-item-note">${record.note || '未备注'}</div>
+                        <div class="history-item-date">${record.date}</div>
+                    </div>
+                    <div class="history-item-amount">+${formatMoney(record.amount)}</div>
+                    <button class="btn-delete" onclick="deleteRecord(${records.length - 1 - index})" title="删除">×</button>
+                </div>
+            `).join('');
+        }
+
+        function addRecord() {
+            const amountInput = document.getElementById('amountInput');
+            const noteInput = document.getElementById('noteInput');
+            const amount = parseFloat(amountInput.value);
+
+            if (!amount || amount <= 0) {
+                amountInput.style.borderColor = '#ff6b6b';
+                setTimeout(() => amountInput.style.borderColor = '', 1000);
+                return;
+            }
+
+            const record = {
+                amount: amount,
+                note: noteInput.value.trim(),
+                date: new Date().toLocaleString('zh-CN', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                })
+            };
+
+            records.push(record);
+            saveData();
+
+            amountInput.value = '';
+            noteInput.value = '';
+
+            updateDisplay();
+            renderHistory();
+        }
+
+        function deleteRecord(index) {
+            if (confirm('确定要删除这条记录吗？')) {
+                records.splice(index, 1);
+                saveData();
+                updateDisplay();
+                renderHistory();
+            }
+        }
+
+        function setAmount(val) {
+            const input = document.getElementById('amountInput');
+            const current = parseFloat(input.value) || 0;
+            input.value = current + val;
+            input.focus();
+        }
+
+        function saveData() {
+            localStorage.setItem('savingsRecords', JSON.stringify(records));
+        }
+
+        function celebrate() {
+            const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe'];
+            const container = document.getElementById('celebration');
+
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                container.appendChild(confetti);
+
+                setTimeout(() => confetti.remove(), 3000);
+            }
+        }
+
+        // 回车提交
+        document.getElementById('amountInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addRecord();
+        });
+        document.getElementById('noteInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addRecord();
+        });
+
+        // 初始化
+        updateDisplay();
+        renderHistory();
+    </script>
+</body>
+</html>
